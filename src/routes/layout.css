@@ -1,0 +1,15 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #121212;
+    }
+}
+
+@media (prefers-color-scheme: light) {
+        body {
+        background-color: #fff;
+    }
+}
