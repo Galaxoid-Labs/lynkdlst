@@ -151,60 +151,69 @@
     };
 </script>
 
+<main class="container">
 {#if events.length === 0}{:else}
     <div class="event-list">
-        <ul>
             {#each events as event}
-                <li>
-                    <a
-                        href={event.linkUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        ><strong>{event.title}</strong></a
-                    >
-                    <span class="source-domain"
-                        >({extractDomain(event.linkUrl)})</span
-                    >
-                    <br />
-                    {#if event.description && event.description.trim() !== ""}
-                        <em>{event.description}</em> <br />
-                    {/if}
-                    {#if event.tags.length > 0}
-                        {#each event.tags as tag}
-                            <span class="tag-pill">{tag}</span>
-                        {/each}
-                        <br />
-                    {/if}
-                    <div id="footer-info">
+                <article>
+                    <header>
                         {#if authorMetadata[event.author]}
                             {#if authorMetadata[event.author].picture}
-                                <img
-                                    class="avatar"
-                                    src={authorMetadata[event.author].picture}
-                                />
+                                <img class="avatar" src={authorMetadata[event.author].picture}/>
                             {:else}
-                                <img
-                                    class="avatar"
-                                    src="https://robohash.org/{event.author}"
-                                />
+                                <img class="avatar" src="https://robohash.org/{event.author}" />
                             {/if}
-                            <span class="author-name"
-                                >{authorMetadata[event.author].display_name ||
+                            <span class="author-name">{authorMetadata[event.author].display_name ||
                                     authorMetadata[event.author].name ||
-                                    event.author}</span
-                            >
+                                    event.author}
+                            </span>
                         {/if}
-                        <span class="published-at"
-                            >Published: {timeAgo(event.publishedAt)}</span
-                        >
-                    </div>
-                </li>
+                        <small>
+                            <em class="published-at">Published: {timeAgo(event.publishedAt)}</em>
+                        </small>
+                    </header>
+                    <h4>
+                        <a href={event.linkUrl} target="_blank" rel="noopener noreferrer">{event.title}</a>
+                        <small><em>({extractDomain(event.linkUrl)})</em></small>
+                    </h4>
+
+                        {#if event.description && event.description.trim() !== ""}
+                            <p>{event.description}</p>
+                        {/if}
+                        {#if event.tags.length > 0}
+                            {#each event.tags as tag}
+                                <button class="tag-pill">{tag}</button>
+                            {/each}
+                        {/if}
+
+                    <footer></footer>
+
+                </article>
             {/each}
-        </ul>
     </div>
 {/if}
+</main>
 
 <style>
+    .avatar {
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+    }
+    .tag-pill {
+        margin-right: 6px;
+        border-radius: 4px;
+        padding: 1px 4px;
+    }
+    a:hover {
+        cursor: pointer;
+    }
+    .published-at {
+        float: right;
+    }
+</style>
+
+<!-- <style>
     @media (prefers-color-scheme: dark) {
 
         .avatar {
@@ -357,4 +366,4 @@
         }
     }
 
-</style>
+</style> -->
