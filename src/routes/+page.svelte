@@ -212,6 +212,7 @@
         font-size: 1em;
     }
     .avatar {
+        background-color: white;
         border-radius: 50%;
         width: 20px;
         height: 20px;
@@ -219,6 +220,7 @@
     }
     .tag {
         margin-right: 6px;
+        margin-bottom: 6px;
         border-radius: 4px;
         padding: 1px 4px;
     }
