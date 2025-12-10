@@ -168,13 +168,11 @@
                                     event.author}
                             </span>
                         {/if}
-                        <small>
-                            <em class="published-at">Published: {timeAgo(event.publishedAt)}</em>
-                        </small>
+                        <small class="published-at">Published {timeAgo(event.publishedAt)}</small>
                     </header>
                     <h4>
                         <a href={event.linkUrl} target="_blank" rel="noopener noreferrer">{event.title}</a>
-                        <small><em>({extractDomain(event.linkUrl)})</em></small>
+                        <small><em class="domain"> ↗ ({extractDomain(event.linkUrl)})</em></small>
                     </h4>
 
                         {#if event.description && event.description.trim() !== ""}
@@ -182,7 +180,7 @@
                         {/if}
                         {#if event.tags.length > 0}
                             {#each event.tags as tag}
-                                <button class="tag-pill">{tag}</button>
+                                <button class="tag">{tag}</button>
                             {/each}
                         {/if}
 
@@ -195,12 +193,21 @@
 </main>
 
 <style>
+    .domain {
+        font-weight: 500;
+        font-size: 0.83em;
+        opacity: 0.5;
+    }
+    .container {
+        padding: 1em;
+    }
     .avatar {
         border-radius: 50%;
         width: 20px;
         height: 20px;
+        margin-right: 8px;
     }
-    .tag-pill {
+    .tag {
         margin-right: 6px;
         border-radius: 4px;
         padding: 1px 4px;
