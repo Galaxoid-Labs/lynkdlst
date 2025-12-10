@@ -152,15 +152,17 @@
 </script>
 
 <main class="container">
-{#if events.length === 0}{:else}
+{#if events.length > 0}
     <div class="event-list">
             {#each events as event}
                 <article>
                     <header>
                         {#if authorMetadata[event.author]}
                             {#if authorMetadata[event.author].picture}
+                                <!-- svelte-ignore a11y_missing_attribute -->
                                 <img class="avatar" src={authorMetadata[event.author].picture}/>
                             {:else}
+                                <!-- svelte-ignore a11y_missing_attribute -->
                                 <img class="avatar" src="https://robohash.org/{event.author}" />
                             {/if}
                             <span class="author-name">{authorMetadata[event.author].display_name ||
@@ -219,158 +221,3 @@
         float: right;
     }
 </style>
-
-<!-- <style>
-    @media (prefers-color-scheme: dark) {
-
-        .avatar {
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-        }
-
-        .author-name {
-            font-size: 0.85em;
-            color: #fff;
-        }
-
-        .tag-pill {
-            display: inline-block;
-            background-color: firebrick;
-            color: #fff;
-            border-radius: 2px;
-            padding: 0px 6px;
-            margin-right: 4px;
-            font-size: 0.8em;
-            vertical-align: middle;
-            letter-spacing: 0.02em;
-        }
-        .source-domain {
-            font-size: 0.85em;
-            color: #888;
-            margin-left: 0.5em;
-        }
-        div#footer-info {
-            display: flex;
-            flex-direction: row;
-            column-gap: 5px;
-            align-items: center;
-            height: 60px;
-            height: fit-content;
-            padding-top: 12px;
-        }
-        .published-at {
-            color: #a9a9a9;
-            font-size: 0.85em;
-        }
-        em {
-            color: #555;
-            font-size: 0.93em;
-        }
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        div.event-list {
-            max-width: 1000px;
-            margin: 0 auto;
-            margin-top: 1em;
-            margin-bottom: 1em;
-            background-color: #121212;
-        }
-        li {
-            margin: 1em;
-            padding: 0.5em;
-            background-color: #121212;
-            border: 1px solid #242424;
-            border-radius: 5px;
-            overflow-wrap: break-word;
-        }
-        a {
-            color: blue;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-        a:visited {
-            color: darkviolet;
-        }
-
-    }
-
-    @media (prefers-color-scheme: light) {
-
-        .avatar {
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-        }
-
-        .author-name {
-            font-size: 0.85em;
-        }
-
-        .tag-pill {
-            display: inline-block;
-            background-color: orangered;
-            color: #fff;
-            border-radius: 2px;
-            padding: 0px 6px;
-            margin-right: 4px;
-            font-size: 0.8em;
-            vertical-align: middle;
-            letter-spacing: 0.02em;
-        }
-        .source-domain {
-            font-size: 0.85em;
-            color: #888;
-            margin-left: 0.5em;
-        }
-        div#footer-info {
-            display: flex;
-            flex-direction: row;
-            column-gap: 5px;
-            align-items: center;
-            height: 60px;
-            height: fit-content;
-            padding-top: 12px;
-        }
-        .published-at {
-            color: #a9a9a9;
-            font-size: 0.85em;
-        }
-        em {
-            color: #555;
-            font-size: 0.93em;
-        }
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        div.event-list {
-            max-width: 1000px;
-            margin: 0 auto;
-            margin-top: 1em;
-            margin-bottom: 1em;
-        }
-        li {
-            margin: 1em;
-            padding: 0.5em;
-            border: 1px solid #e9e8e8;
-            border-radius: 5px;
-            overflow-wrap: break-word;
-        }
-        a {
-            color: blue;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-        a:visited {
-            color: purple;
-        }
-    }
-
-</style> -->
