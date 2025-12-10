@@ -207,11 +207,15 @@
     .container {
         padding: 1em;
     }
+    .author-name {
+        font-weight: 500;
+        font-size: 1em;
+    }
     .avatar {
         border-radius: 50%;
         width: 20px;
         height: 20px;
-        margin-right: 8px;
+        margin-right: 6px;
     }
     .tag {
         margin-right: 6px;
@@ -223,5 +227,6 @@
     }
     .published-at {
         float: right;
+        padding-top: 3px; /* Align with avatar */
     }
 </style>
