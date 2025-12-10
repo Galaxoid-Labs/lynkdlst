@@ -169,6 +169,10 @@
                                     authorMetadata[event.author].name ||
                                     event.author}
                             </span>
+                        {:else}
+                            <!-- svelte-ignore a11y_missing_attribute -->
+                            <img class="avatar" src="https://robohash.org/{event.author}" />
+                            <span class="author-name">{event.author.slice(0, 8)}</span>
                         {/if}
                         <small class="published-at">Published {timeAgo(event.publishedAt)}</small>
                     </header>
@@ -186,7 +190,7 @@
                             {/each}
                         {/if}
 
-                    <footer></footer>
+                    <!-- <footer></footer> -->
 
                 </article>
             {/each}
