@@ -6,13 +6,22 @@
     import logo from "$lib/assets/lnkdlst_logo.svg";
 
     let relayPool: NostrRelayPool;
+    let relays = $state<string[]>(["wss://relay.damus.io"]);
     let events = $state<EventLink[]>([]);
     let authorMetadata = $state<Record<string, AuthorMetadata>>({});
     let loggedInUserPubkey = $state<string | null>(null);
     let loggedInUserMetadata = $state<AuthorMetadata | null>(null);
+    let loggedInUserRelays = $state<string[] | null>(null);
 
     onMount(() => {
-        relayPool = new NostrRelayPool(["wss://relay.damus.io"]).onConnected((relayUrl) => {
+        connectRelays();
+    });
+
+    function connectRelays() {
+        relayPool?.close(); // Disconnect existing pool if any
+        events = [];
+        authorMetadata = {};
+        relayPool = new NostrRelayPool(relays).onConnected((relayUrl) => {
             const filter: NostrFilter = {
                 kinds: [39701],
                 limit: 200,
@@ -31,6 +40,9 @@
                 case "logged-in-user-metadata":
                     processLoggedInUserMetadataEvent(event, relayUrl);
                     break;
+                case "logged-in-user-relays":
+                    processLoggedInUserRelaysEvent(event, relayUrl);
+                    break;
                 default:
                     console.warn(`Unknown subscription ID: ${subId}`);
             }
@@ -45,7 +57,14 @@
                 relayPool.subscribe("author-metadata", [filter], [relayUrl]);
             }
         });
-    });
+
+        relayPool?.onClosed((ev, relayUrl) => {
+            console.log(`Disconnected from relay: ${relayUrl}`, ev);
+        });
+        relayPool?.onError((err, relayUrl) => {
+            console.error(`Error on relay ${relayUrl}:`, err);
+        });
+    }
 
     function processLinkEvent(event: NostrEvent, relayUrl: string) {
         if (event.content === "" || !event.content) {
@@ -81,6 +100,8 @@
         };
 
         events.push(el);
+        // Sort events by publishedAt descending
+        events.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
     }
 
     function processAuthorMetadataEvent(event: NostrEvent, relayUrl: string) {
@@ -104,6 +125,15 @@
             display_name: metadata.display_name,
             picture: metadata.picture,
         };
+    }
+
+    function processLoggedInUserRelaysEvent(event: NostrEvent, relayUrl: string) {
+        // Placeholder for processing logged-in user relays events if needed
+        console.log("Logged-in user relays event:", event);
+        // Extrat relay urls from tags
+        // TODO: Only grab "write" relays for now. This means "r" tags with no marker value or "write" as second value
+        const relays = getTagValues(event, "r");
+        loggedInUserRelays = relays;
     }
 
     // Get first value of a specific tag
@@ -152,6 +182,7 @@
                 console.log("Logged in with pubkey:", pubkey);
                 loggedInUserPubkey = pubkey;
                 fetchLoggedInUserMetadata();
+                fetchLoggedInUserRelays();
             });
         } else {
             alert("Nostr extension not found!");
@@ -163,8 +194,12 @@
         if (modal) {
             if (modal.open) {
                 modal.close();
+                // allow background scrolling
+                document.documentElement.classList.remove("modal-is-open");
             } else {
                 modal.showModal();
+                // prevent background scrolling
+                document.documentElement.classList.add("modal-is-open");
             }
         }
     }
@@ -184,8 +219,46 @@
 
         // fetch tags
         const tagsInput = document.querySelector('input[name="post-link-tags"]') as HTMLInputElement;
-        const tags = tagsInput ? tagsInput.value.split(",").map(tag => tag.trim()) : [];
+        const tags = tagsInput ? tagsInput.value.split(",").map((tag) => tag.trim()) : [];
         console.log("Submitting link:", { linkUrl, description, tags });
+
+        // clear inputs
+        if (urlInput) urlInput.value = "";
+        if (titleInput) titleInput.value = "";
+        if (descriptionInput) descriptionInput.value = "";
+        if (tagsInput) tagsInput.value = "";
+
+        // Create NostrEvent
+        const dTag = linkUrl.replace(/^https?:\/\//, ""); // remove protocol for "d" tag
+        const nostrEvent: NostrEvent = {
+            kind: 39701,
+            pubkey: loggedInUserPubkey || "",
+            created_at: Math.floor(Date.now() / 1000),
+            tags: [
+                ["d", dTag],
+                ["title", title],
+                ["published_at", `${Math.floor(Date.now() / 1000)}`],
+                ...tags.map((tag) => ["t", tag]),
+            ],
+            content: description,
+        };
+
+        // Request signature from Nostr extension
+        if (window.nostr) {
+            let signedEvent: NostrEvent;
+            window.nostr
+                .signEvent(nostrEvent)
+                .then((event: NostrEvent) => {
+                    signedEvent = event;
+                    // Publish to relay pool
+                    relayPool.publish(signedEvent);
+                })
+                .catch((err: Error) => {
+                    console.error("Error signing event:", err);
+                });
+        }
+
+        togglePostLinkModal();
     }
 
     function fetchLoggedInUserMetadata() {
@@ -196,6 +269,18 @@
                     authors: [pubkey],
                 };
                 relayPool.subscribe("logged-in-user-metadata", [filter], relayPool.getRelayUrls());
+            });
+        }
+    }
+
+    function fetchLoggedInUserRelays() {
+        if (window.nostr) {
+            window.nostr.getPublicKey().then((pubkey: string) => {
+                const filter: NostrFilter = {
+                    kinds: [10002],
+                    authors: [pubkey],
+                };
+                relayPool.subscribe("logged-in-user-relays", [filter], relayPool.getRelayUrls());
             });
         }
     }
@@ -223,17 +308,26 @@
 <dialog id="post-link-modal">
     <article>
         <h2>Post a new link</h2>
-        <label for="post-link-url"><small>Link URL</small>
-            <input id="post-link-url" type="url" name="post-link-url" aria-label="Link URL" required>
+        <label for="post-link-url"
+            ><small>Link URL</small>
+            <input id="post-link-url" type="url" name="post-link-url" aria-label="Link URL" required />
         </label>
-        <label for="post-link-title"><small>Title</small>
-            <input id="post-link-title" type="text" name="post-link-title" aria-label="Title" required>
+        <label for="post-link-title"
+            ><small>Title</small>
+            <input id="post-link-title" type="text" name="post-link-title" aria-label="Title" required />
         </label>
-        <label for="post-link-description"><small>Description <em>(Optional)</em></small>
-            <textarea id="post-link-description" name="post-link-description" aria-label="Link description or notes" style="opacity: 0.5;"></textarea>
+        <label for="post-link-description"
+            ><small>Description <em>(Optional)</em></small>
+            <textarea
+                id="post-link-description"
+                name="post-link-description"
+                aria-label="Link description or notes"
+                style="opacity: 0.5;"
+            ></textarea>
         </label>
-        <label for="post-link-tags"><small>Tags <em>(Optional)</em></small>
-            <input id="post-link-tags" type="text" name="post-link-tags" placeholder="nostr,bookmark,web" aria-label="Tags">
+        <label for="post-link-tags"
+            ><small>Tags <em>(Optional)</em></small>
+            <input id="post-link-tags" type="text" name="post-link-tags" placeholder="nostr,bookmark,web" aria-label="Tags" />
         </label>
         <footer>
             <button class="secondary" onclick={togglePostLinkModal}> Cancel</button><button onclick={submitLink}>
@@ -245,38 +339,38 @@
 
 <main class="container">
     <header>
-        <img src={logo} alt="icon" width="128" height="128" style="margin-bottom: 0.5em;" />
+        <img src={logo} alt="icon" width="64" height="64" style="margin-bottom: 0.5em;" />
         <p style="opacity: 0.8; font-style: italic; font-weight: 800;">Decentralized web bookmarks</p>
+        <!-- <div style="display: inline-block;">abc</div>
+        <img class="avatar" src="https://robohash.org/abc123asdf" /> -->
         <nav>
             <ul>
-                <li><a href="#">Home</a></li>
+                <!-- <li><a href="#">Home</a></li> -->
             </ul>
             <ul>
-                <!-- <li><a href="#">About</a></li>
-    <li><a href="#">Services</a></li> -->
-                        {#if loggedInUserMetadata}
-                            {#if loggedInUserMetadata.picture}
-                                <!-- svelte-ignore a11y_missing_attribute -->
-                                <img class="avatar" src={loggedInUserMetadata.picture} />
-                            {:else}
-                                <!-- svelte-ignore a11y_missing_attribute -->
-                                <img class="avatar" src="https://robohash.org/{loggedInUserPubkey || ""}" />
-                            {/if}
-                            <span class="author-name"
-                                >{loggedInUserMetadata.display_name ||
-                                    loggedInUserMetadata.name ||
-                                    loggedInUserMetadata.pubkey}
-                            </span>
-                        {:else}
-                            <!-- svelte-ignore a11y_missing_attribute -->
-                            <img class="avatar" src="https://robohash.org/{loggedInUserPubkey || ""}" />
-                            <!-- <span class="author-name">{loggedInUserMetadata.pubkey.slice(0, 8)}</span> -->
-                            <li><a href="#" onclick={login}>Login</a></li>
-                        {/if}
-
-                <li>
-                    <button onclick={togglePostLinkModal}>Post Link</button>
-                </li>
+                {#if loggedInUserMetadata}
+                    {#if loggedInUserMetadata.picture}
+                        <!-- svelte-ignore a11y_missing_attribute -->
+                        <img class="avatar" src={loggedInUserMetadata.picture} />
+                    {:else}
+                        <!-- svelte-ignore a11y_missing_attribute -->
+                        <img class="avatar" src="https://robohash.org/{loggedInUserPubkey || ''}" />
+                    {/if}
+                    <span class="author-name"
+                        >{loggedInUserMetadata.display_name || loggedInUserMetadata.name || loggedInUserMetadata.pubkey.slice(0, 8)}
+                    </span>
+                    <li>
+                        <a href="#" style="margin-right: 0.5em;">Logout</a>
+                    </li>
+                    <!-- <li>
+                        <a href="#">My Links</a>
+                    </li> -->
+                    <li>
+                        <mark><a href="#" onclick={togglePostLinkModal}>Post Link</a></mark>
+                    </li>
+                {:else}
+                    <li><a href="#" onclick={login}>Login</a></li>
+                {/if}
             </ul>
         </nav>
     </header>
