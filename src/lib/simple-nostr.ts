@@ -304,6 +304,16 @@ export class NostrRelayPool {
         return Nostr.verifyEvent(event);
     }
 
+    /** Get all relay URLs currently connected. */
+    getRelayUrls(): string[] {
+        return Array.from(this.relays.keys());
+    }
+
+    /** Get all subscription IDs currently active. */
+    getSubscriptionIds(): string[] {
+        return Array.from(this.subscriptions.keys());
+    }
+
     // Publish an event to specified relays or all relays if relayUrls is empty
     /**
      * Publish an event to specific relays or all connected relays.

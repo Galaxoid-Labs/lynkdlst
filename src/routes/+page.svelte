@@ -1,25 +1,24 @@
 <script lang="ts">
-    import {
-        type NostrEvent,
-        NostrRelayPool,
-        type NostrFilter,
-    } from "$lib/simple-nostr";
+    import { type NostrEvent, NostrRelayPool, type NostrFilter } from "$lib/simple-nostr";
     import { onMount } from "svelte";
+    import { fade, fly } from "svelte/transition";
+
+    import logo from "$lib/assets/lnkdlst_logo.svg";
 
     let relayPool: NostrRelayPool;
     let events = $state<EventLink[]>([]);
     let authorMetadata = $state<Record<string, AuthorMetadata>>({});
+    let loggedInUserPubkey = $state<string | null>(null);
+    let loggedInUserMetadata = $state<AuthorMetadata | null>(null);
 
     onMount(() => {
-        relayPool = new NostrRelayPool(["wss://relay.damus.io"]).onConnected(
-            (relayUrl) => {
-                const filter: NostrFilter = {
-                    kinds: [39701],
-                    limit: 200,
-                };
-                relayPool.subscribe("event-links", [filter], [relayUrl]);
-            },
-        );
+        relayPool = new NostrRelayPool(["wss://relay.damus.io"]).onConnected((relayUrl) => {
+            const filter: NostrFilter = {
+                kinds: [39701],
+                limit: 200,
+            };
+            relayPool.subscribe("event-links", [filter], [relayUrl]);
+        });
 
         relayPool?.onEvent((subId, event, relayUrl) => {
             switch (subId) {
@@ -28,6 +27,9 @@
                     break;
                 case "author-metadata":
                     processAuthorMetadataEvent(event, relayUrl);
+                    break;
+                case "logged-in-user-metadata":
+                    processLoggedInUserMetadataEvent(event, relayUrl);
                     break;
                 default:
                     console.warn(`Unknown subscription ID: ${subId}`);
@@ -92,6 +94,18 @@
         };
     }
 
+    function processLoggedInUserMetadataEvent(event: NostrEvent, relayUrl: string) {
+        // Placeholder for processing logged-in user metadata events if needed
+        const metadata: AuthorMetadata = JSON.parse(event.content);
+        console.log("Logged-in user metadata:", metadata);
+        loggedInUserMetadata = {
+            pubkey: event.pubkey,
+            name: metadata.name,
+            display_name: metadata.display_name,
+            picture: metadata.picture,
+        };
+    }
+
     // Get first value of a specific tag
     function getTagValue(event: NostrEvent, tag: string): string | undefined {
         const found = event.tags.find((t) => t[0] === tag);
@@ -132,6 +146,60 @@
         return `${days}d ago`;
     }
 
+    function login() {
+        if (window.nostr) {
+            window.nostr.getPublicKey().then((pubkey: string) => {
+                console.log("Logged in with pubkey:", pubkey);
+                loggedInUserPubkey = pubkey;
+                fetchLoggedInUserMetadata();
+            });
+        } else {
+            alert("Nostr extension not found!");
+        }
+    }
+
+    function togglePostLinkModal() {
+        const modal = document.getElementById("post-link-modal") as HTMLDialogElement;
+        if (modal) {
+            if (modal.open) {
+                modal.close();
+            } else {
+                modal.showModal();
+            }
+        }
+    }
+
+    function submitLink() {
+        // fetch link
+        const urlInput = document.querySelector('input[name="post-link-url"]') as HTMLInputElement;
+        const linkUrl = urlInput ? urlInput.value : "";
+
+        // fetch title
+        const titleInput = document.querySelector('input[name="post-link-title"]') as HTMLInputElement;
+        const title = titleInput ? titleInput.value : "";
+
+        // fetch description
+        const descriptionInput = document.querySelector('textarea[name="post-link-description"]') as HTMLTextAreaElement;
+        const description = descriptionInput ? descriptionInput.value : "";
+
+        // fetch tags
+        const tagsInput = document.querySelector('input[name="post-link-tags"]') as HTMLInputElement;
+        const tags = tagsInput ? tagsInput.value.split(",").map(tag => tag.trim()) : [];
+        console.log("Submitting link:", { linkUrl, description, tags });
+    }
+
+    function fetchLoggedInUserMetadata() {
+        if (window.nostr) {
+            window.nostr.getPublicKey().then((pubkey: string) => {
+                const filter: NostrFilter = {
+                    kinds: [0],
+                    authors: [pubkey],
+                };
+                relayPool.subscribe("logged-in-user-metadata", [filter], relayPool.getRelayUrls());
+            });
+        }
+    }
+
     type EventLink = {
         id: string;
         relay: string;
@@ -151,21 +219,82 @@
     };
 </script>
 
+<!-- Post Link Modal -->
+<dialog id="post-link-modal">
+    <article>
+        <h2>Post a new link</h2>
+        <label for="post-link-url"><small>Link URL</small>
+            <input id="post-link-url" type="url" name="post-link-url" aria-label="Link URL" required>
+        </label>
+        <label for="post-link-title"><small>Title</small>
+            <input id="post-link-title" type="text" name="post-link-title" aria-label="Title" required>
+        </label>
+        <label for="post-link-description"><small>Description <em>(Optional)</em></small>
+            <textarea id="post-link-description" name="post-link-description" aria-label="Link description or notes" style="opacity: 0.5;"></textarea>
+        </label>
+        <label for="post-link-tags"><small>Tags <em>(Optional)</em></small>
+            <input id="post-link-tags" type="text" name="post-link-tags" placeholder="nostr,bookmark,web" aria-label="Tags">
+        </label>
+        <footer>
+            <button class="secondary" onclick={togglePostLinkModal}> Cancel</button><button onclick={submitLink}>
+                Submit
+            </button>
+        </footer>
+    </article>
+</dialog>
+
 <main class="container">
-{#if events.length > 0}
-    <div class="event-list">
+    <header>
+        <img src={logo} alt="icon" width="128" height="128" style="margin-bottom: 0.5em;" />
+        <p style="opacity: 0.8; font-style: italic; font-weight: 800;">Decentralized web bookmarks</p>
+        <nav>
+            <ul>
+                <li><a href="#">Home</a></li>
+            </ul>
+            <ul>
+                <!-- <li><a href="#">About</a></li>
+    <li><a href="#">Services</a></li> -->
+                        {#if loggedInUserMetadata}
+                            {#if loggedInUserMetadata.picture}
+                                <!-- svelte-ignore a11y_missing_attribute -->
+                                <img class="avatar" src={loggedInUserMetadata.picture} />
+                            {:else}
+                                <!-- svelte-ignore a11y_missing_attribute -->
+                                <img class="avatar" src="https://robohash.org/{loggedInUserPubkey || ""}" />
+                            {/if}
+                            <span class="author-name"
+                                >{loggedInUserMetadata.display_name ||
+                                    loggedInUserMetadata.name ||
+                                    loggedInUserMetadata.pubkey}
+                            </span>
+                        {:else}
+                            <!-- svelte-ignore a11y_missing_attribute -->
+                            <img class="avatar" src="https://robohash.org/{loggedInUserPubkey || ""}" />
+                            <!-- <span class="author-name">{loggedInUserMetadata.pubkey.slice(0, 8)}</span> -->
+                            <li><a href="#" onclick={login}>Login</a></li>
+                        {/if}
+
+                <li>
+                    <button onclick={togglePostLinkModal}>Post Link</button>
+                </li>
+            </ul>
+        </nav>
+    </header>
+    {#if events.length > 0}
+        <div class="event-list">
             {#each events as event}
-                <article>
+                <article transition:fly={{ y: 50, duration: 500 }}>
                     <header>
                         {#if authorMetadata[event.author]}
                             {#if authorMetadata[event.author].picture}
                                 <!-- svelte-ignore a11y_missing_attribute -->
-                                <img class="avatar" src={authorMetadata[event.author].picture}/>
+                                <img class="avatar" src={authorMetadata[event.author].picture} />
                             {:else}
                                 <!-- svelte-ignore a11y_missing_attribute -->
                                 <img class="avatar" src="https://robohash.org/{event.author}" />
                             {/if}
-                            <span class="author-name">{authorMetadata[event.author].display_name ||
+                            <span class="author-name"
+                                >{authorMetadata[event.author].display_name ||
                                     authorMetadata[event.author].name ||
                                     event.author}
                             </span>
@@ -181,24 +310,35 @@
                         <small><em class="domain"> ↗ ({extractDomain(event.linkUrl)})</em></small>
                     </h4>
 
-                        {#if event.description && event.description.trim() !== ""}
-                            <p>{event.description}</p>
-                        {/if}
-                        {#if event.tags.length > 0}
-                            {#each event.tags as tag}
-                                <button class="tag">{tag}</button>
-                            {/each}
-                        {/if}
+                    {#if event.description && event.description.trim() !== ""}
+                        <p>{event.description}</p>
+                    {/if}
+                    {#if event.tags.length > 0}
+                        <hr />
+                        {#each event.tags as tag}
+                            <button class="tag">{tag}</button>
+                        {/each}
+                    {/if}
 
                     <!-- <footer></footer> -->
-
                 </article>
             {/each}
-    </div>
-{/if}
+        </div>
+    {/if}
 </main>
 
 <style>
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+    #post-link-modal {
+        animation: fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
     .domain {
         font-weight: 500;
         font-size: 0.83em;
