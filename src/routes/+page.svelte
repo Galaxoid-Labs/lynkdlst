@@ -343,12 +343,9 @@
         <p style="opacity: 0.8; font-style: italic; font-weight: 800;">Decentralized web bookmarks</p>
         <!-- <div style="display: inline-block;">abc</div>
         <img class="avatar" src="https://robohash.org/abc123asdf" /> -->
-        <nav>
-            <ul>
-                <!-- <li><a href="#">Home</a></li> -->
-            </ul>
-            <ul>
+        <div class="user-controls">
                 {#if loggedInUserMetadata}
+
                     {#if loggedInUserMetadata.picture}
                         <!-- svelte-ignore a11y_missing_attribute -->
                         <img class="avatar" src={loggedInUserMetadata.picture} />
@@ -359,18 +356,20 @@
                     <span class="author-name"
                         >{loggedInUserMetadata.display_name || loggedInUserMetadata.name || loggedInUserMetadata.pubkey.slice(0, 8)}
                     </span>
-                    <li>
-                        <a href="#" style="margin-right: 0.5em;">Logout</a>
-                    </li>
                     <!-- <li>
                         <a href="#">My Links</a>
                     </li> -->
-                    <li>
-                        <mark><a href="#" onclick={togglePostLinkModal}>Post Link</a></mark>
-                    </li>
+                    <span style="padding-left: 0.4em;">::</span>
+                    <a href="#" style="padding-left: 0.5em;" onclick={login}>Logout</a>
+                    <a href="#" class="right" onclick={togglePostLinkModal}>📝 Post Link</a>
                 {:else}
-                    <li><a href="#" onclick={login}>Login</a></li>
+                    <a href="#" onclick={login}>Login</a>
                 {/if}
+        </div>
+        <nav aria-label="breadcrumb">
+            <ul>
+                <li><span style="margin-left: 0.2em; font-weight: 800;">Tag &nbsp;</span></li>
+                <li><a href="#">music</a></li>
             </ul>
         </nav>
     </header>
@@ -437,6 +436,16 @@
         font-weight: 500;
         font-size: 0.83em;
         opacity: 0.5;
+    }
+    .user-controls {
+        background-color: var(--pico-card-sectioning-background-color); 
+        padding: 0.4em 0.5em;
+        border: rgba(0, 0, 0, 0.1) 1px dotted;
+        /* box-shadow: 3px 2px 4px rgba(0, 0, 0, 0.05); */
+        display: grid;
+        align-items: center;
+        grid-template-columns: auto auto auto 1fr auto;
+        margin-bottom: 1em;
     }
     .container {
         padding: 1em;
