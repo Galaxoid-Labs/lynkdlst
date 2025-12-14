@@ -403,6 +403,21 @@ export class NostrRelayPool {
         }
     }
 
+    /** Enable periodic PING messages every 30 seconds to keep the connection alive. */
+    // TODO: Potential for mutliple intervals for some edge cases
+    // Should track interval IDs per relay and clear on close
+    enablePing(relayUrl: string): void {
+        const intervalId = setInterval(() => {
+            const ws = this.relays.get(relayUrl);
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(['PING']));
+            } else {
+                console.log(`${new Date().toISOString()} :: Ping cancelled for ${relayUrl}: WebSocket is not open`);
+                clearInterval(intervalId);
+            }
+        }, 30000); // 30 seconds
+    }
+
     /** Fired when a relay connection is opened. */
     onConnected(callback: (relayUrl: string) => void): this {
         this.onConnectedCallback = callback;

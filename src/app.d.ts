@@ -14,6 +14,7 @@ declare global {
 	interface Window {
 		nostr?: NIP07;
 	}
+
 }
 
 export {};

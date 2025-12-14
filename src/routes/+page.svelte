@@ -1,9 +1,10 @@
 <script lang="ts">
     import { type NostrEvent, NostrRelayPool, type NostrFilter } from "$lib/simple-nostr";
+    import type { EventLink, AuthorMetadata } from "$lib/types";
     import { onMount } from "svelte";
-    import { fade, fly } from "svelte/transition";
 
     import logo from "$lib/assets/lnkdlst_logo.svg";
+    import EventLinkView from "$lib/components/EventLinkView.svelte";
 
     let relayPool: NostrRelayPool;
     let relays = $state<string[]>(["wss://relay.damus.io"]);
@@ -21,12 +22,14 @@
         relayPool?.close(); // Disconnect existing pool if any
         events = [];
         authorMetadata = {};
-        relayPool = new NostrRelayPool(relays).onConnected((relayUrl) => {
-            const filter: NostrFilter = {
-                kinds: [39701],
-                limit: 200,
-            };
-            relayPool.subscribe("event-links", [filter], [relayUrl]);
+        relayPool = new NostrRelayPool(relays)
+            .onConnected((relayUrl) => {
+                const filter: NostrFilter = {
+                    kinds: [39701],
+                    limit: 200,
+                };
+                relayPool.subscribe("event-links", [filter], [relayUrl]);
+                relayPool.enablePing(relayUrl);
         });
 
         relayPool?.onEvent((subId, event, relayUrl) => {
@@ -59,10 +62,10 @@
         });
 
         relayPool?.onClosed((ev, relayUrl) => {
-            console.log(`Disconnected from relay: ${relayUrl}`, ev);
+            console.log(`${new Date().toISOString()} :: Disconnected from relay: ${relayUrl}`, ev);
         });
         relayPool?.onError((err, relayUrl) => {
-            console.error(`Error on relay ${relayUrl}:`, err);
+            console.error(`${new Date().toISOString()} :: Error on relay ${relayUrl}:`, err);
         });
     }
 
@@ -151,29 +154,6 @@
             .filter((t) => t[0] === tag)
             .map((t) => t.slice(1))
             .flat();
-    }
-
-    // Function to extract domain from URL
-    function extractDomain(url: string): string {
-        try {
-            const urlObj = new URL(url);
-            return urlObj.hostname.replace("www.", "");
-        } catch (e) {
-            return url; // Return the original URL if parsing fails
-        }
-    }
-
-    // Function that returns string of published date since now
-    function timeAgo(date: Date): string {
-        const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-
-        if (seconds < 60) return `${seconds}s ago`;
-        const minutes = Math.floor(seconds / 60);
-        if (minutes < 60) return `${minutes}m ago`;
-        const hours = Math.floor(minutes / 60);
-        if (hours < 24) return `${hours}h ago`;
-        const days = Math.floor(hours / 24);
-        return `${days}d ago`;
     }
 
     function login() {
@@ -285,23 +265,10 @@
         }
     }
 
-    type EventLink = {
-        id: string;
-        relay: string;
-        author: string;
-        description: string;
-        linkUrl: string;
-        title: string;
-        tags: string[];
-        publishedAt: Date;
-    };
+    function close() {
+        relayPool?.close();
+    }
 
-    type AuthorMetadata = {
-        pubkey: string;
-        name?: string;
-        display_name?: string;
-        picture?: string;
-    };
 </script>
 
 <!-- Post Link Modal -->
@@ -341,8 +308,6 @@
     <header>
         <img src={logo} alt="icon" width="64" height="64" style="margin-bottom: 0.5em;" />
         <p style="opacity: 0.8; font-style: italic; font-weight: 800;">Decentralized web bookmarks</p>
-        <!-- <div style="display: inline-block;">abc</div>
-        <img class="avatar" src="https://robohash.org/abc123asdf" /> -->
         <div class="user-controls">
                 {#if loggedInUserMetadata}
 
@@ -356,11 +321,8 @@
                     <span class="author-name"
                         >{loggedInUserMetadata.display_name || loggedInUserMetadata.name || loggedInUserMetadata.pubkey.slice(0, 8)}
                     </span>
-                    <!-- <li>
-                        <a href="#">My Links</a>
-                    </li> -->
                     <span style="padding-left: 0.4em;">::</span>
-                    <a href="#" style="padding-left: 0.5em;" onclick={login}>Logout</a>
+                    <a href="#" style="padding-left: 0.5em;" onclick={close}>Logout</a>
                     <a href="#" class="right" onclick={togglePostLinkModal}>📝 Post Link</a>
                 {:else}
                     <a href="#" onclick={login}>Login</a>
@@ -376,45 +338,7 @@
     {#if events.length > 0}
         <div class="event-list">
             {#each events as event}
-                <article transition:fly={{ y: 50, duration: 500 }}>
-                    <header>
-                        {#if authorMetadata[event.author]}
-                            {#if authorMetadata[event.author].picture}
-                                <!-- svelte-ignore a11y_missing_attribute -->
-                                <img class="avatar" src={authorMetadata[event.author].picture} />
-                            {:else}
-                                <!-- svelte-ignore a11y_missing_attribute -->
-                                <img class="avatar" src="https://robohash.org/{event.author}" />
-                            {/if}
-                            <span class="author-name"
-                                >{authorMetadata[event.author].display_name ||
-                                    authorMetadata[event.author].name ||
-                                    event.author}
-                            </span>
-                        {:else}
-                            <!-- svelte-ignore a11y_missing_attribute -->
-                            <img class="avatar" src="https://robohash.org/{event.author}" />
-                            <span class="author-name">{event.author.slice(0, 8)}</span>
-                        {/if}
-                        <small class="published-at">Published {timeAgo(event.publishedAt)}</small>
-                    </header>
-                    <h4>
-                        <a href={event.linkUrl} target="_blank" rel="noopener noreferrer">{event.title}</a>
-                        <small><em class="domain"> ↗ ({extractDomain(event.linkUrl)})</em></small>
-                    </h4>
-
-                    {#if event.description && event.description.trim() !== ""}
-                        <p>{event.description}</p>
-                    {/if}
-                    {#if event.tags.length > 0}
-                        <hr />
-                        {#each event.tags as tag}
-                            <button class="tag">{tag}</button>
-                        {/each}
-                    {/if}
-
-                    <!-- <footer></footer> -->
-                </article>
+                <EventLinkView {event} authorMetadata={authorMetadata[event.author]} />
             {/each}
         </div>
     {/if}
@@ -432,16 +356,10 @@
     #post-link-modal {
         animation: fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
     }
-    .domain {
-        font-weight: 500;
-        font-size: 0.83em;
-        opacity: 0.5;
-    }
     .user-controls {
         background-color: var(--pico-card-sectioning-background-color); 
         padding: 0.4em 0.5em;
         border: rgba(0, 0, 0, 0.1) 1px dotted;
-        /* box-shadow: 3px 2px 4px rgba(0, 0, 0, 0.05); */
         display: grid;
         align-items: center;
         grid-template-columns: auto auto auto 1fr auto;
@@ -461,17 +379,5 @@
         height: 20px;
         margin-right: 6px;
     }
-    .tag {
-        margin-right: 6px;
-        margin-bottom: 6px;
-        border-radius: 4px;
-        padding: 1px 4px;
-    }
-    a:hover {
-        cursor: pointer;
-    }
-    .published-at {
-        float: right;
-        padding-top: 3px; /* Align with avatar */
-    }
+
 </style>
