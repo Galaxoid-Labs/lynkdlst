@@ -304,37 +304,40 @@
     </article>
 </dialog>
 
-<main class="container">
-    <header>
-        <img src={logo} alt="icon" width="64" height="64" style="margin-bottom: 0.5em;" />
-        <p style="opacity: 0.8; font-style: italic; font-weight: 800;">Decentralized web bookmarks</p>
-        <div class="user-controls">
-                {#if loggedInUserMetadata}
-
-                    {#if loggedInUserMetadata.picture}
-                        <!-- svelte-ignore a11y_missing_attribute -->
-                        <img class="avatar" src={loggedInUserMetadata.picture} />
-                    {:else}
-                        <!-- svelte-ignore a11y_missing_attribute -->
-                        <img class="avatar" src="https://robohash.org/{loggedInUserPubkey || ''}" />
-                    {/if}
-                    <span class="author-name"
-                        >{loggedInUserMetadata.display_name || loggedInUserMetadata.name || loggedInUserMetadata.pubkey.slice(0, 8)}
-                    </span>
-                    <span style="padding-left: 0.4em;">::</span>
-                    <a href="#" style="padding-left: 0.5em;" onclick={close}>Logout</a>
-                    <a href="#" class="right" onclick={togglePostLinkModal}>📝 Post Link</a>
+<header>
+    <!-- <img src={logo} alt="icon" width="64" height="64" style="margin-bottom: 0.5em;" /> -->
+    <h1>Web bookmarks</h1>
+    <p class="muted">Decentralized web bookmarks</p>
+    <div class="user-controls">
+            {#if loggedInUserMetadata}
+                {#if loggedInUserMetadata.picture}
+                    <!-- svelte-ignore a11y_missing_attribute -->
+                    <img class="avatar" src={loggedInUserMetadata.picture} />
                 {:else}
-                    <a href="#" onclick={login}>Login</a>
+                    <!-- svelte-ignore a11y_missing_attribute -->
+                    <img class="avatar" src="https://robohash.org/{loggedInUserPubkey || ''}" />
                 {/if}
-        </div>
-        <nav aria-label="breadcrumb">
-            <ul>
-                <li><span style="margin-left: 0.2em; font-weight: 800;">Tag &nbsp;</span></li>
-                <li><a href="#">music</a></li>
-            </ul>
-        </nav>
-    </header>
+                <span class="author-name"
+                    >{loggedInUserMetadata.display_name || loggedInUserMetadata.name || loggedInUserMetadata.pubkey.slice(0, 8)}
+                </span>
+                <span style="padding-left: 0.4em;">::</span>
+                <a href="#" style="padding-left: 0.5em;" onclick={close}>Logout</a>
+                <a href="#" class="right" onclick={togglePostLinkModal}>📝 Post Link</a>
+            {:else}
+                <a href="#" onclick={login}>Login</a>
+            {/if}
+    </div>
+    <!-- <nav aria-label="breadcrumb">
+        <ul>
+            <li><span style="margin-left: 0.2em; font-weight: 800;">Tag &nbsp;</span></li>
+            <li><a href="#">music</a></li>
+        </ul>
+    </nav> -->
+
+</header>
+
+<main class="grid">
+
     {#if events.length > 0}
         <div class="event-list">
             {#each events as event}
@@ -343,6 +346,10 @@
         </div>
     {/if}
 </main>
+
+<footer>
+    <p class="muted">Connected Relays: {relays.length}</p>
+</footer>
 
 <style>
     @keyframes fadeIn {
@@ -357,17 +364,14 @@
         animation: fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
     }
     .user-controls {
-        background-color: var(--pico-card-sectioning-background-color); 
         padding: 0.4em 0.5em;
-        border: rgba(0, 0, 0, 0.1) 1px dotted;
         display: grid;
         align-items: center;
         grid-template-columns: auto auto auto 1fr auto;
-        margin-bottom: 1em;
     }
-    .container {
-        padding: 1em;
-    }
+    /* .user-controls, a, a:hover, a:visited {
+        color: var(--accent);
+    } */
     .author-name {
         font-weight: 500;
         font-size: 1em;
@@ -378,6 +382,16 @@
         width: 20px;
         height: 20px;
         margin-right: 6px;
+    }
+    .grid {
+        padding: 1em;
+        border-top: 1px solid var(--line);
+        border-bottom: none; 
+        border-left: none;
+        border-right: none;
+    }
+    header {
+        padding: 1em;
     }
 
 </style>

@@ -32,7 +32,7 @@
 </script>
 
 <article transition:fly={{ y: 50, duration: 500 }}>
-    <header>
+    <div class="author-info">
         {#if authorMetadata}
             {#if authorMetadata.picture}
                 <!-- svelte-ignore a11y_missing_attribute -->
@@ -48,24 +48,30 @@
             <span class="author-name">{event.author.slice(0, 8)}</span>
         {/if}
         <small class="published-at">Published {timeAgo(event.publishedAt)}</small>
-    </header>
-    <h4>
+    </div>
+    <h2>
         <a href={event.linkUrl} target="_blank" rel="noopener noreferrer">{event.title}</a>
         <small><em class="domain"> ↗ ({extractDomain(event.linkUrl)})</em></small>
-    </h4>
+    </h2>
 
     {#if event.description && event.description.trim() !== ""}
-        <p>{event.description}</p>
+        <p class="muted">{event.description}</p>
     {/if}
     {#if event.tags.length > 0}
-        <hr />
         {#each event.tags as tag}
-            <button class="tag">{tag}</button>
+            <button class="pill">{tag}</button>
         {/each}
     {/if}
 </article>
 
 <style>
+    .author-info {
+        background-color: var(--pico-card-sectioning-background-color); 
+        display: grid;
+        align-items: center;
+        grid-template-columns: auto 1fr auto;
+        margin-bottom: 1em;
+    }
     .author-name {
         font-weight: 500;
         font-size: 1em;
@@ -82,11 +88,12 @@
         height: 20px;
         margin-right: 6px;
     }
-    .tag {
-        margin-right: 6px;
+    .pill {
+        margin-right: 0.5em;
+        /* margin-right: 6px;
         margin-bottom: 6px;
         border-radius: 4px;
-        padding: 1px 4px;
+        padding: 1px 4px; */
     }
     .published-at {
         float: right;
